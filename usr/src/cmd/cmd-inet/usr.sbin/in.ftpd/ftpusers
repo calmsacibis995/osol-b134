@@ -1,0 +1,22 @@
+#
+# List of users denied access to the FTP server, see ftpusers(4).
+#
+root
+daemon
+bin
+sys
+adm
+lp
+uucp
+nuucp
+dladm
+smmsp
+listen
+gdm
+xvm
+mysql
+openldap
+webservd
+nobody
+noaccess
+nobody4

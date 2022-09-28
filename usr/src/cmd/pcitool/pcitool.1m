@@ -1,0 +1,217 @@
+.\" CDDL HEADER START
+.\"
+.\" The contents of this file are subject to the terms of the
+.\" Common Development and Distribution License (the "License").
+.\" You may not use this file except in compliance with the License.
+.\"
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+.\" or http://www.opensolaris.org/os/licensing.
+.\" See the License for the specific language governing permissions
+.\" and limitations under the License.
+.\"
+.\" When distributing Covered Code, include this CDDL HEADER in each
+.\" file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+.\" If applicable, add the following below this CDDL HEADER, with the
+.\" fields enclosed by brackets "[]" replaced with your own identifying
+.\" information: Portions Copyright [yyyy] [name of copyright owner]
+.\"
+.\" CDDL HEADER END
+.\"
+.\" Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
+.\" Use is subject to license terms.
+.TH pcitool 1M
+.SH "NAME"
+pcitool \- interrupt routing tool
+.SH "SYNOPSIS"
+.PP
+/usr/sbin/pcitool \fIpci@<unit-address>\fR|\f I niu@<unit-address>\fR -i \fI<ino#> | all\fR [ -r [ -c ] | -w \fI<cpu#>\fR [ -g ] ] [ -v ] [ -q ]
+
+/usr/sbin/pcitool \fIpci@<unit-address>\fR -m \fI<msi#> | all\fR [ -r [ -c ] | -w \fI<cpu#>\fR [ -g ] ] [ -v ] [ -q ]
+
+/usr/sbin/pcitool [ -h ]
+
+.SH "DESCRIPTION"
+.PP
+PCItool is a low-level tool which provides a facility for getting and setting
+interrupt routing information.
+
+.SS \fIInterrupt Routing\fR
+
+The \fIpcitool -i\fR command displays device and CPU routing information for
+INOs on a given nexus, and allows rerouting of a given INO or INO group to a
+specific CPU. Use the \fIpcitool -m\fR command to retrieve and reroute MSI/Xs.
+  
+On SPARC platforms, the INO is mapped to an interrupt mondo, where as one or
+more MSI/Xs are mapped to an INO. So, INO and MSI/Xs are individually
+retargetable. Use "-i" option to retrieve or reroute a given INO, where as
+use "-m" option for MSI/Xs.
+   
+On x86 platforms, both INOs and MSI/Xs are mapped to the same interrupt vectors.
+Use "-i" option to retrieve and reroute any interrupt vectors (both INO and
+MSI/Xs).  So, "-m" option is not required on x86 platforms. Hence it is not
+supported.
+
+\fIRequired privileges\fR
+
+The user must have all privileges in order to access interrupt
+information.  A regular user can access interrupt information when
+\fBsu\fR(1M) to root or granted the "Maintenance and Repair" rights
+profile in the \fBuser_attr\fR file. See \fBuser_attr\fR(4) and
+\fBrbac\fR(5).
+
+
+\fICommandline options\fR
+
+-r [ -c ]
+
+Display device and CPU routing information for INOs on a given nexus.
+The device path and instance number of each device for each displayed INO will
+be shown.  On some platforms, interrupts dedicated to the root complex are
+indicated with "(Internal)" appended to their pathname.
+
+Dump interrupt controller information with -c.
+
+If neither -r nor -w are provided on the commandline, -r is assumed.
+
+The command for showing all INOs on /pci@1e,600000 is:
+   
+  # pcitool /pci@1e,600000 -i all
+   
+The command for showing ino 0x19 on  the  same  root  nexus, along with sample
+output, is:
+   
+  # pcitool /pci@1e,600000 -i 19
+   
+  ino 19 mapped to cpu 0
+  Device: /pci@1e,600000/pci@0/pci@9/pci@0/scsi@1
+    Driver: mpt, instance 0
+   
+  ino 19 mapped to cpu 0
+  Device: /pci@1e,600000/pci@0/pci@2/pci@0/network@4
+    Driver: bge, instance 0
+   
+The command for showing MSI 0x1  on  the  same  root  nexus,
+along with sample output, is:
+   
+# pcitool /pci@1e,600000 -m 1
+   
+  msi 1 mapped to cpu 0
+  Device: /pci@1e,600000/pci@0/pci@9/pci@0/scsi@1
+    Driver: mpt, instance 0
+
+-w \fI<cpu#>\fR [ -g ]
+
+Route the given INO or MSI/X to the given CPU. Display the  new and original
+routing information. The INO or MSI/X must be specified.
+  
+Successful rerouting ino 19 above from cpu 0 to cpu 1 gives the following
+output:
+   
+  # pcitool /pci@1e,600000 -i 19 -w 1
+   
+  Interrupts on ino 19 reassigned: Old cpu: 0, New cpu: 1
+   
+Successful rerouting msi 1 above from cpu 1 to cpu 0 gives the following
+output:
+  
+  # pcitool /pci@1e,600000 -m 1 -w 0
+  
+  Interrupts on msi 1 reassigned: Old cpu: 1, New cpu: 0
+
+On some platforms (such as X86) multiple MSI interrupts of a single function
+need to be rerouted together.  Use -g to do this.  -g works only on supported
+platforms  and only for groups of MSI interrupts.  (A "group" of 1 is accepted.)
+When -g is used, the vector provided must be the lowest-numbered vector of the
+group.  The size of the group is determined internally.
+
+Successful rerouting a group of INOs starting at 60 from cpu 0 to cpu 1 gives
+the following output:
+
+  # pcitool /pci@0,0 -i 60 -w 1 -g
+
+  Interrupts on ino group starting at ino 60 reassigned: Old cpu: 0, New cpu: 1
+
+-v
+
+Verbose output.
+
+-q
+
+No errors reported as messages.  Unix error status still returned by
+program, however.
+
+.SH EXIT STATUS
+
+The following error statuses are returned to the shell:
+
+.sp
+.ne 2
+.mk
+\fB0\fR
+.in +24n
+.rt
+No error
+.sp
+.sp 1
+.in -24n
+.sp
+.ne 2
+.mk
+\fBEINVAL\fR
+.in +24n
+.rt
+Out-of-range, misaligned or otherwise invalid argument has been passed in\&.
+.sp
+.sp 1
+.in -24n
+.sp
+.ne 2
+.mk
+\fBETIME\fR
+.in +24n
+.rt
+Timeout waiting for pending interrupt to settle before changing interrupts to
+a new CPU\&.
+.sp
+.sp 1
+.in -24n
+.sp
+.ne 2
+.mk
+\fBEIO\fR
+.in +24n
+.rt
+An IO error occurred\&.
+.sp
+.sp 1
+.in -24n
+
+.SH FILES
+  /usr/sbin/pcitool
+
+.SH "ATTRIBUTES"
+.PP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+  _________________________________________________________ 
+ | ATTRIBUTE TYPE       | ATTRIBUTE VALUE                  |
+ |______________________|__________________________________|
+ | Architecture         | PCI-based systems                |
+ |______________________|__________________________________|
+ | Availability         | SUNWio-tools                     |
+ |______________________|__________________________________|
+ | Interface Stability  | Volatile                         |
+ |______________________|__________________________________|
+
+.SH SEE ALSO
+\fBpci\fR(4), \fBsu\fR(1M), \fBuser_attr\fR(4), \fBrbac\fR(5)
+
+.SH NOTES
+All values are entered in hex.
+
+Not all commands are applicable to all platforms.
+
+REFERENCES
+
+PCI specification (available from www.pcisig.org)
